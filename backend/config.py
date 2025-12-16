@@ -6,12 +6,13 @@ Manejo seguro de variables de entorno
 import os
 from pydantic_settings import BaseSettings
 from typing import Optional
+import json
 
 class Settings(BaseSettings):
     """Configuración de la aplicación"""
     
     # Supabase Configuration
-    SUPABASE_DB_URL: Optional[str] = None  # URL completa de conexión (recomendado)
+    SUPABASE_DB_URL: Optional[str] = None
     SUPABASE_DB_USER: Optional[str] = None
     SUPABASE_DB_PASSWORD: Optional[str] = None
     SUPABASE_DB_HOST: Optional[str] = None
@@ -32,20 +33,19 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     DEBUG: bool = False
     
-    # CORS
-    CORS_ORIGINS: list = ["http://localhost:3000"]
+    # CORS - Acepta string JSON o lista
+    CORS_ORIGINS: str = '["http://localhost:3000"]'
     
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "ignore"  # Ignorar campos extra en lugar de rechazarlos
+        extra = "ignore"
     
     def get_database_url(self) -> str:
         """Obtener URL de conexión a la base de datos"""
         if self.SUPABASE_DB_URL:
             return self.SUPABASE_DB_URL
         
-        # Construir URL si se proporcionan componentes individuales
         if self.SUPABASE_DB_USER and self.SUPABASE_DB_PASSWORD and self.SUPABASE_DB_HOST:
             return (
                 f"postgresql://{self.SUPABASE_DB_USER}:{self.SUPABASE_DB_PASSWORD}"
@@ -54,10 +54,18 @@ class Settings(BaseSettings):
         
         raise ValueError("Se requiere SUPABASE_DB_URL o componentes individuales de conexión")
     
+    def get_cors_origins(self) -> list:
+        """Parsear CORS_ORIGINS como lista"""
+        try:
+            if isinstance(self.CORS_ORIGINS, str):
+                return json.loads(self.CORS_ORIGINS)
+            return self.CORS_ORIGINS
+        except:
+            return ["http://localhost:3000"]
+    
     def is_upstash_redis(self) -> bool:
         """Verificar si se está usando Upstash Redis"""
         return bool(self.UPSTASH_REDIS_REST_URL and self.UPSTASH_REDIS_REST_TOKEN)
 
 # Instancia global de configuración
 settings = Settings()
-

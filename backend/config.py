@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # CORS - Acepta string JSON o lista
-    CORS_ORIGINS: str = '["http://localhost:3000"]'
+    # Incluye localhost para desarrollo y dominio de Vercel para producción
+    CORS_ORIGINS: str = '["http://localhost:3000", "https://ticketsyeso.vercel.app"]'
     
     class Config:
         env_file = ".env"
@@ -61,7 +62,8 @@ class Settings(BaseSettings):
                 return json.loads(self.CORS_ORIGINS)
             return self.CORS_ORIGINS
         except:
-            return ["http://localhost:3000"]
+            # Fallback: incluir localhost y dominio de Vercel
+            return ["http://localhost:3000", "https://ticketsyeso.vercel.app"]
     
     def is_upstash_redis(self) -> bool:
         """Verificar si se está usando Upstash Redis"""

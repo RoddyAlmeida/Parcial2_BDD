@@ -30,16 +30,30 @@ app = FastAPI(
 cors_origins = settings.get_cors_origins()
 logger.info(f"CORS Origins configurados: {cors_origins}")
 logger.info(f"CORS_ORIGINS raw value: {settings.CORS_ORIGINS}")
+logger.info(f"CORS_ALLOW_ALL: {settings.CORS_ALLOW_ALL}")
 
-# CORS - Permitir orígenes específicos y también cualquier subdominio de vercel.app
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Permitir cualquier subdominio de vercel.app
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS - Configuración
+# Si CORS_ALLOW_ALL está activado, permitir todos los orígenes (solo para debug)
+if settings.CORS_ALLOW_ALL or "*" in cors_origins:
+    logger.warning("⚠️  CORS configurado para permitir TODOS los orígenes (modo debug)")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Permitir todos los orígenes
+        allow_credentials=False,  # No se puede usar con allow_origins=["*"]
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Configuración normal: orígenes específicos + regex para vercel.app
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,  # Orígenes específicos
+        allow_origin_regex=r"https://.*\.vercel\.app",  # Cualquier subdominio de vercel.app
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 
 # Configuración de base de datos (Supabase)
 DATABASE_URL = settings.get_database_url()
@@ -429,8 +443,14 @@ async def debug_cors():
     return {
         "cors_origins": settings.get_cors_origins(),
         "cors_origins_raw": settings.CORS_ORIGINS,
-        "cors_origins_type": type(settings.CORS_ORIGINS).__name__
+        "cors_origins_type": type(settings.CORS_ORIGINS).__name__,
+        "message": "Si puedes ver esto desde el navegador, CORS está funcionando"
     }
+
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handler explícito para requests OPTIONS (preflight)"""
+    return {"message": "OK"}
 
 @app.get("/tickets")
 async def listar_tickets(

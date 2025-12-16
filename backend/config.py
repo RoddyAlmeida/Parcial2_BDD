@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     
     # CORS - Acepta string JSON o lista
     # Incluye localhost para desarrollo y dominio de Vercel para producción
+    # Para permitir todos los orígenes temporalmente, usar: ["*"]
     CORS_ORIGINS: str = '["http://localhost:3000", "https://ticketsyeso.vercel.app"]'
+    
+    # Opción para permitir todos los orígenes (solo para debug/temporal)
+    CORS_ALLOW_ALL: bool = False
     
     class Config:
         env_file = ".env"

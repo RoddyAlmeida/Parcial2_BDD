@@ -45,12 +45,13 @@ if settings.CORS_ALLOW_ALL or "*" in cors_origins:
     )
 else:
     # Configuración normal: orígenes específicos + regex para vercel.app
-    # Nota: En FastAPI, allow_origin_regex se evalúa después de allow_origins
-    # Si el origen no está en allow_origins, se verifica contra el regex
+    # IMPORTANTE: En FastAPI, allow_origin_regex se evalúa SI el origen NO está en allow_origins
+    # Para cubrir todos los previews de Vercel, usamos regex que incluye cualquier subdominio
+    logger.info("Configurando CORS con orígenes específicos y regex para vercel.app")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,  # Orígenes específicos (incluye ticketsyeso.vercel.app)
-        allow_origin_regex=r"https://.*\.vercel\.app",  # Cualquier subdominio de vercel.app como fallback
+        allow_origin_regex=r"https://.*\.vercel\.app",  # Cualquier subdominio de vercel.app (incluye previews)
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
         allow_headers=["*"],

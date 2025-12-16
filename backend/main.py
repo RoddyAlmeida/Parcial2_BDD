@@ -11,9 +11,14 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timezone
 import json
+import logging
 
 from config import settings
 from redis_client import redis_client
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Sistema de Tickets de Soporte",
@@ -21,10 +26,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# Obtener orígenes CORS
+cors_origins = settings.get_cors_origins()
+logger.info(f"CORS Origins configurados: {cors_origins}")
+logger.info(f"CORS_ORIGINS raw value: {settings.CORS_ORIGINS}")
+
+# CORS - Permitir orígenes específicos y también cualquier subdominio de vercel.app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),  # ← Cambiar esta línea
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Permitir cualquier subdominio de vercel.app
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -411,6 +422,15 @@ async def health_check():
         health["status"] = "degraded"
     
     return health
+
+@app.get("/debug/cors")
+async def debug_cors():
+    """Endpoint de debug para verificar configuración de CORS"""
+    return {
+        "cors_origins": settings.get_cors_origins(),
+        "cors_origins_raw": settings.CORS_ORIGINS,
+        "cors_origins_type": type(settings.CORS_ORIGINS).__name__
+    }
 
 @app.get("/tickets")
 async def listar_tickets(

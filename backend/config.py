@@ -57,13 +57,37 @@ class Settings(BaseSettings):
     
     def get_cors_origins(self) -> list:
         """Parsear CORS_ORIGINS como lista"""
+        default_origins = ["http://localhost:3000", "https://ticketsyeso.vercel.app"]
+        
         try:
             if isinstance(self.CORS_ORIGINS, str):
-                return json.loads(self.CORS_ORIGINS)
-            return self.CORS_ORIGINS
-        except:
-            # Fallback: incluir localhost y dominio de Vercel
-            return ["http://localhost:3000", "https://ticketsyeso.vercel.app"]
+                # Limpiar espacios y comillas extra
+                cors_str = self.CORS_ORIGINS.strip()
+                
+                # Si empieza y termina con comillas, quitarlas
+                if cors_str.startswith('"') and cors_str.endswith('"'):
+                    cors_str = cors_str[1:-1]
+                
+                # Intentar parsear como JSON
+                try:
+                    origins = json.loads(cors_str)
+                    if isinstance(origins, list):
+                        return origins
+                except json.JSONDecodeError:
+                    # Si falla, intentar separar por comas
+                    origins = [o.strip().strip('"').strip("'") for o in cors_str.split(',')]
+                    if origins and origins[0]:  # Verificar que no esté vacío
+                        return origins
+            
+            if isinstance(self.CORS_ORIGINS, list):
+                return self.CORS_ORIGINS
+                
+        except Exception as e:
+            import logging
+            logging.warning(f"Error parseando CORS_ORIGINS: {e}. Usando valores por defecto.")
+        
+        # Fallback: incluir localhost y dominio de Vercel
+        return default_origins
     
     def is_upstash_redis(self) -> bool:
         """Verificar si se está usando Upstash Redis"""

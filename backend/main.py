@@ -45,14 +45,17 @@ if settings.CORS_ALLOW_ALL or "*" in cors_origins:
     )
 else:
     # Configuración normal: orígenes específicos + regex para vercel.app
+    # Nota: En FastAPI, allow_origin_regex se evalúa después de allow_origins
+    # Si el origen no está en allow_origins, se verifica contra el regex
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,  # Orígenes específicos
-        allow_origin_regex=r"https://.*\.vercel\.app",  # Cualquier subdominio de vercel.app
+        allow_origins=cors_origins,  # Orígenes específicos (incluye ticketsyeso.vercel.app)
+        allow_origin_regex=r"https://.*\.vercel\.app",  # Cualquier subdominio de vercel.app como fallback
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
         allow_headers=["*"],
         expose_headers=["*"],
+        max_age=3600,  # Cache preflight requests por 1 hora
     )
 
 # Configuración de base de datos (Supabase)
@@ -444,7 +447,17 @@ async def debug_cors():
         "cors_origins": settings.get_cors_origins(),
         "cors_origins_raw": settings.CORS_ORIGINS,
         "cors_origins_type": type(settings.CORS_ORIGINS).__name__,
-        "message": "Si puedes ver esto desde el navegador, CORS está funcionando"
+        "message": "Si puedes ver esto desde el navegador, CORS está funcionando",
+        "cors_allow_all": settings.CORS_ALLOW_ALL
+    }
+
+@app.get("/test-cors")
+async def test_cors():
+    """Endpoint simple para probar CORS desde el frontend"""
+    return {
+        "status": "ok",
+        "message": "CORS funcionando correctamente",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.options("/{full_path:path}")
